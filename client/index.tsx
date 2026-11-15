@@ -54,10 +54,6 @@ function LoginPanel({ api }: { api: Api }) {
     const timer = window.setInterval(() => { void refresh() }, 1000)
     return () => window.clearInterval(timer)
   }, [status?.phase, refresh])
-  React.useEffect(() => {
-    if (status?.url && !status.code) window.open(status.url, '_blank', 'noopener,noreferrer')
-  }, [status?.url, status?.code])
-
   const run = async (action: () => Promise<RpcResponse<unknown>>) => {
     setBusy(true)
     setError('')
@@ -74,7 +70,7 @@ function LoginPanel({ api }: { api: Api }) {
     {!status?.flowAvailable && status?.ready && <div>当前 DSH 没有注册 openai-codex 登录流程；请检查 llm-pi-ai 插件是否启用。</div>}
     {status?.error && <div role="alert">{status.error}</div>}
     {status?.message && <div>{status.message}</div>}
-    {status?.url && <a href={status.url} target="_blank" rel="noreferrer">打开 ChatGPT 授权页面</a>}
+    {status?.url && <a href={status.url} target="_blank" rel="noreferrer">打开 ChatGPT 授权页面（只打开一次）</a>}
     {status?.code && <div><strong>设备码：{status.code}</strong></div>}
     {status?.prompt && <div style={{ display: 'grid', gap: 8 }}>
       <label>{status.prompt.message}</label>
