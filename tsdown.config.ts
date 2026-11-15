@@ -9,7 +9,7 @@ export default defineConfig({
   dts: false,
   sourcemap: false,
   clean: false,
-  outDir: 'client',
+  outDir: 'lib',
   external: ['react', 'react/jsx-runtime'],
   noExternal: (source: string) => source === 'react' || source === 'react/jsx-runtime' ? undefined : true,
   outputOptions: {
@@ -19,4 +19,3 @@ export default defineConfig({
     intro: 'var module = { exports: {} }; var exports = module.exports;',
   },
 })
-
