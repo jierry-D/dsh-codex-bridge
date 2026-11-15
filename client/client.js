@@ -64,9 +64,6 @@ window.__ModuleLoader__.load({
 				}, 1e3);
 				return () => window.clearInterval(timer);
 			}, [status?.phase, refresh]);
-			react.default.useEffect(() => {
-				if (status?.url && !status.code) window.open(status.url, "_blank", "noopener,noreferrer");
-			}, [status?.url, status?.code]);
 			const run = async (action) => {
 				setBusy(true);
 				setError("");
@@ -100,7 +97,7 @@ window.__ModuleLoader__.load({
 						href: status.url,
 						target: "_blank",
 						rel: "noreferrer",
-						children: "打开 ChatGPT 授权页面"
+						children: "打开 ChatGPT 授权页面（只打开一次）"
 					}),
 					status?.code && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("strong", { children: ["设备码：", status.code] }) }),
 					status?.prompt && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
