@@ -1,12 +1,12 @@
 # DSH Codex Bridge
 
-为 DeepSeek Harness 提供 OpenAI Codex 模型路由，通过 ChatGPT 设备码流程登录。OAuth 实现来自 DSH 使用的 `@earendil-works/pi-ai`；凭据写入 DSH 本地凭据库，访问令牌不会经过设置页。
+为 DeepSeek Harness 内置的 `openai-codex` 模型路由提供 ChatGPT 设备码登录。OAuth 实现来自 DSH 使用的 `@earendil-works/pi-ai`；凭据写入 DSH 内置 `llm-pi-ai/openai-codex` 本地凭据记录，访问令牌不会经过设置页。
 
-本项目按 [gooosie/dsh-openai-codex-auth](https://github.com/gooosie/dsh-openai-codex-auth) 的设备码登录、PiAiAdapter 和凭据生命周期设计重做，并按其 MIT 许可证保留来源说明。只包含登录、状态、退出和模型请求所需功能；不包含用量、重置卡或代理功能。
+本项目按 [gooosie/dsh-openai-codex-auth](https://github.com/gooosie/dsh-openai-codex-auth) 的设备码登录和凭据生命周期设计重做，并按其 MIT 许可证保留来源说明。只包含登录、状态和退出；模型适配器继续使用 DSH 内置实现，不包含用量、重置卡或代理功能。
 
-## 重要：只允许一个 `openai-codex` 路由
+## 前置条件
 
-DSH 的每个模型 provider 只能注册一个 adapter。使用本插件前，先在 DSH 配置中停用 `llm-pi-ai.providers.openai-codex` 内置路由，并卸载其他注册 `openai-codex` 的插件；否则会发生 adapter 重复注册，插件无法启用。不要停用 `llm-pi-ai` 的其他 provider。
+保持 DSH 内置 `llm-pi-ai.providers.openai-codex` 路由启用。本插件不注册第二个模型 adapter，因此不会与该内置路由重复注册。请卸载其他会自行注册 `openai-codex` adapter 的第三方插件。
 
 ## 兼容范围
 
@@ -42,10 +42,10 @@ npm pack --dry-run
 ## 安全边界
 
 - OAuth 设备码和令牌流程由 `@earendil-works/pi-ai` 处理。
-- 凭据由 DSH `credentials` 服务写入本地 `PI_OAUTH_OPENAI_CODEX` 项；插件卸载不会自动删除凭据，请先在设置页退出登录。
+- 凭据由 DSH `credentials` 服务写入本地 `llm-pi-ai/openai-codex` 记录；插件卸载不会自动删除凭据，请先在设置页退出登录。
 - 只有验证网址的 `https` 协议及 `auth.openai.com` 主机名会显示给用户。
 - 不采集或上传 token、完整账号标识、用量、重置卡或代理凭据。
 
 ## 来源与许可
 
-本插件的设备码 OAuth、PiAiAdapter 接入和本地凭据生命周期设计参考 [gooosie/dsh-openai-codex-auth](https://github.com/gooosie/dsh-openai-codex-auth)，其项目采用 MIT 许可证；详见 [NOTICE.md](./NOTICE.md) 和 [LICENSE](./LICENSE)。
+本插件的设备码 OAuth 和本地凭据生命周期设计参考 [gooosie/dsh-openai-codex-auth](https://github.com/gooosie/dsh-openai-codex-auth)，其项目采用 MIT 许可证；详见 [NOTICE.md](./NOTICE.md) 和 [LICENSE](./LICENSE)。
