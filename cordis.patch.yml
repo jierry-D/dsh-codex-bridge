@@ -1,4 +1,3 @@
 - insert:
     - id: dsh-codex-bridge
-      name: ./lib/index.js
-
+      name: dsh-codex-bridge
