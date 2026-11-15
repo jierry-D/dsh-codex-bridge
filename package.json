@@ -1,6 +1,6 @@
 {
   "name": "dsh-codex-bridge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "main": "lib/index.js",
@@ -17,6 +17,16 @@
       "platform": "web",
       "inject": ["@deepseek-ai/dsh-client-ui-settings"]
     }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-authorization": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-credentials": "0.2.2-rc.3",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.2-rc.3"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-authorization": { "optional": true },
+    "@deepseek-ai/dsh-credentials": { "optional": true },
+    "@deepseek-ai/dsh-typert-protocol": { "optional": true }
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsdown --config tsdown.config.ts",
