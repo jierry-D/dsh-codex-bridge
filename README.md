@@ -11,7 +11,7 @@
 
 1. 在 DSH「插件」页禁用/卸载此前启用后报 `adapter for provider "openai-codex" is already registered` 的 Codex OAuth 适配器插件，避免旧插件继续和 Harness 内置路由冲突。
 2. 在「设置 → 模型」使用 `llm-pi-ai` 提供的 `openai-codex` 路由；API 地址和 API Key 留空。不要把它当作自定义 OpenAI 兼容服务，也不要再添加另一个会注册同名模型适配器的插件。
-3. 在应用内插件管理器选择“从本地目录安装”，选择本目录 `dsh-codex-bridge`。
+3. 在桌面端「添加插件」中粘贴 `github:jierry-D/dsh-codex-bridge` 并安装；如果界面要求完整地址，也可粘贴 `https://github.com/jierry-D/dsh-codex-bridge`。
 4. 完全退出并重新打开 DSH。
 5. 打开「设置 → Codex 登录」，点“使用 ChatGPT 账号登录”，按浏览器或设备码提示授权。
 6. 回到模型选择器选择 `openai-codex` 下的模型。
