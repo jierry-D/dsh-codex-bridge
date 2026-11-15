@@ -118,11 +118,18 @@ export function apply(ctx: any): void {
       (result) => {
         state.prompt?.withdraw()
         state.phase = result.status === 'authorized' ? 'authorized' : 'cancelled'
+        state.url = ''
+        state.code = ''
+        state.message = ''
+        state.error = undefined
       },
       (error) => {
         state.prompt?.withdraw()
         if (state.phase !== 'cancelled') {
           state.phase = 'failed'
+          state.url = ''
+          state.code = ''
+          state.message = ''
           state.error = safeError(error)
         }
       },
