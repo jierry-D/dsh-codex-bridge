@@ -29,59 +29,31 @@ window.__ModuleLoader__.load({
 		react = __toESM(react, 1);
 		let react_jsx_runtime = require("react/jsx-runtime");
 		// client/index.tsx
-		const namespace = "codexBridge";
+		const channel = "/dsh-codex-bridge";
 		const bundle = "dsh-codex-bridge";
-		const textSchema = Object.freeze({ "~standard": Object.freeze({
-			version: 1,
-			vendor: bundle,
-			validate: (value) => typeof value === "string" ? { value } : { issues: [{ message: "expected string" }] }
-		}) });
-		const descriptor = (method, fields = []) => ({
-			id: `${bundle}#${namespace}/${method}`,
-			service: namespace,
-			namespace,
-			method,
-			invocation: { kind: "direct" },
-			parameters: fields.map((name) => ({
-				name,
-				wire: name,
-				source: "json",
-				codec: {
-					mode: "strict",
-					typeSymbol: `${bundle}#${namespace}/${method}:${name}`,
-					create: () => textSchema
-				}
-			})),
-			result: { mode: "src-json" }
+		const apiFor = (rpc) => ({
+			status: () => rpc.call(channel, "status", {}),
+			signIn: () => rpc.call(channel, "sign-in", {}),
+			answer: (value) => rpc.call(channel, "answer", { value }),
+			cancel: () => rpc.call(channel, "cancel", {}),
+			signOut: () => rpc.call(channel, "sign-out", {})
 		});
-		const contribution = {
-			package: bundle,
-			descriptors: [
-				descriptor("status"),
-				descriptor("signIn"),
-				descriptor("answer", ["value"]),
-				descriptor("cancel"),
-				descriptor("signOut")
-			]
-		};
 		const unwrap = (reply) => {
-			if (reply.ok && reply.value !== void 0) return reply.value;
-			throw new Error(reply.error?.message || "无法连接 DSH 授权服务");
+			if (reply.ok) return reply.value;
+			throw new Error(reply.error.message || "无法连接 DSH 授权服务");
 		};
-		function LoginPanel({ getApi }) {
+		function LoginPanel({ api }) {
 			const [status, setStatus] = react.default.useState();
 			const [input, setInput] = react.default.useState("");
 			const [error, setError] = react.default.useState("");
 			const [busy, setBusy] = react.default.useState(false);
 			const refresh = react.default.useCallback(async () => {
-				const api = getApi();
-				if (!api) return;
 				try {
 					setStatus(unwrap(await api.status()));
-				} catch (e) {
-					setError(String(e));
+				} catch (reason) {
+					setError(String(reason));
 				}
-			}, [getApi]);
+			}, [api]);
 			react.default.useEffect(() => {
 				refresh();
 			}, [refresh]);
@@ -96,18 +68,13 @@ window.__ModuleLoader__.load({
 				if (status?.url && !status.code) window.open(status.url, "_blank", "noopener,noreferrer");
 			}, [status?.url, status?.code]);
 			const run = async (action) => {
-				const api = getApi();
-				if (!api) {
-					setError("授权服务未连接，请重启 DSH 后重试。");
-					return;
-				}
 				setBusy(true);
 				setError("");
 				try {
-					unwrap(await action(api));
+					unwrap(await action());
 					await refresh();
-				} catch (e) {
-					setError(e instanceof Error ? e.message : String(e));
+				} catch (reason) {
+					setError(reason instanceof Error ? reason.message : String(reason));
 				} finally {
 					setBusy(false);
 				}
@@ -120,7 +87,7 @@ window.__ModuleLoader__.load({
 				},
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: "Codex 登录" }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "使用 DSH 内置的 ChatGPT OAuth。插件不会注册模型适配器，也不会保存 token。" }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: "使用 DSH 内置的 ChatGPT OAuth。插件不注册模型适配器，凭据由 DSH 管理。" }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: ["状态：", status?.signedIn ? "已登录" : status?.phase === "running" ? "等待授权" : "未登录"] }),
 					!status?.ready && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: "DSH 授权/凭据服务尚未就绪。" }),
 					!status?.flowAvailable && status?.ready && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", { children: "当前 DSH 没有注册 openai-codex 登录流程；请检查 llm-pi-ai 插件是否启用。" }),
@@ -143,7 +110,7 @@ window.__ModuleLoader__.load({
 						},
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", { children: status.prompt.message }), status.prompt.options?.length ? status.prompt.options.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							disabled: busy,
-							onClick: () => void run((api) => api.answer(option.id)),
+							onClick: () => void run(() => api.answer(option.id)),
 							children: option.label
 						}, option.id)) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							style: {
@@ -154,12 +121,13 @@ window.__ModuleLoader__.load({
 								type: status.prompt?.kind === "secret" ? "password" : "text",
 								value: input,
 								placeholder: status.prompt.placeholder,
-								onChange: (e) => setInput(e.target.value)
+								onChange: (event) => setInput(event.target.value)
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								disabled: busy || !input,
-								onClick: () => void run(async (api) => {
-									await api.answer(input);
-									setInput("");
+								onClick: () => void run(async () => {
+									const result = await api.answer(input);
+									if (result.ok) setInput("");
+									return result;
 								}),
 								children: "提交"
 							})]
@@ -173,18 +141,18 @@ window.__ModuleLoader__.load({
 						children: [
 							!status?.signedIn && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								disabled: busy || status?.phase === "running" || !status?.flowAvailable,
-								onClick: () => void run((api) => api.signIn()),
+								onClick: () => void run(() => api.signIn()),
 								children: "使用 ChatGPT 账号登录"
 							}),
 							status?.phase === "running" && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								disabled: busy,
-								onClick: () => void run((api) => api.cancel()),
+								onClick: () => void run(() => api.cancel()),
 								children: "取消"
 							}),
 							status?.signedIn && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								disabled: busy,
 								onClick: () => {
-									if (window.confirm("退出后需要重新登录才能使用 Codex 模型。确定退出？")) run((api) => api.signOut());
+									if (window.confirm("退出后需要重新登录才能使用 Codex 模型。确定退出？")) run(() => api.signOut());
 								},
 								children: "退出登录"
 							})
@@ -198,28 +166,17 @@ window.__ModuleLoader__.load({
 				]
 			});
 		}
-		const inject = ["slots", "remote"];
+		const inject = ["slots", "connection"];
 		function apply(ctx) {
-			ctx.effect(() => {
-				let dispose;
-				let unloaded = false;
-				ctx.remote.$mount(contribution).then((off) => {
-					if (unloaded) off();
-					else dispose = off;
-				}).catch((err) => console.warn("[dsh-codex-bridge] remote unavailable", err));
-				return () => {
-					unloaded = true;
-					dispose?.();
-				};
-			}, "codex-bridge: remote service");
+			const api = apiFor(ctx.get("connection").rpc);
 			ctx.slots.inject("settings.section", () => ctx.slots.register({
 				name: "settings.section",
-				id: "dsh-codex-bridge",
+				id: bundle,
 				order: 14,
 				label: () => "Codex 登录"
-			}, () => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LoginPanel, { getApi: () => ctx.get(`remote.${namespace}`) })));
+			}, () => /* @__PURE__ */ (0, react_jsx_runtime.jsx)(LoginPanel, { api })));
 		}
-		const name = "dsh-codex-bridge";
+		const name = bundle;
 		exports.apply = apply;
 		exports.inject = inject;
 		exports.name = name;
