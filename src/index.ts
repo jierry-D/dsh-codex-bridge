@@ -13,7 +13,7 @@ type PromptView = {
   placeholder?: string
   options?: Array<{ id: string; label: string }>
 }
-type Prompt = { view: PromptView; answer(value: string): void; cancel(): void }
+type Prompt = { view: PromptView; answer(value: string): void; cancel(): void; withdraw(): void }
 type Phase = 'idle' | 'running' | 'authorized' | 'cancelled' | 'failed'
 type State = {
   phase: Phase
@@ -75,24 +75,55 @@ export function apply(ctx: any): void {
               .map((option: any) => ({ id: option.id, label: option.label }))
             : undefined,
         }
-        const prompt: Prompt = {
+        let settled = false
+        let prompt: Prompt
+        const clear = () => { if (state.prompt === prompt) state.prompt = undefined }
+        const removeAbortListener = () => question.signal?.removeEventListener('abort', withdraw)
+        const withdraw = () => {
+          if (settled) return
+          settled = true
+          removeAbortListener()
+          clear()
+          reject(new Error('授权提示已撤回'))
+        }
+        prompt = {
           view,
-          answer: (value) => { state.prompt = undefined; resolve(value) },
+          answer: (value) => {
+            if (settled) return
+            settled = true
+            removeAbortListener()
+            clear()
+            resolve(value)
+          },
           cancel: () => {
-            state.prompt = undefined
+            if (settled) return
+            settled = true
+            removeAbortListener()
+            clear()
             reject(new AuthorizationDeclinedError('用户取消授权'))
           },
+          withdraw,
         }
-        state.prompt?.cancel()
+        if (question.signal?.aborted) {
+          withdraw()
+          return
+        }
+        state.prompt?.withdraw()
         state.prompt = prompt
+        question.signal?.addEventListener('abort', withdraw, { once: true })
+        if (question.signal?.aborted) withdraw()
       }),
     }
     void auth.begin({ key: KEY, method: 'oauth', interaction }).then(
-      (result) => { state.phase = result.status === 'authorized' ? 'authorized' : 'cancelled' },
-      () => {
+      (result) => {
+        state.prompt?.withdraw()
+        state.phase = result.status === 'authorized' ? 'authorized' : 'cancelled'
+      },
+      (error) => {
+        state.prompt?.withdraw()
         if (state.phase !== 'cancelled') {
           state.phase = 'failed'
-          state.error = '授权失败，请重新尝试。'
+          state.error = safeError(error)
         }
       },
     )
@@ -235,9 +266,13 @@ function badRequest(message: string): RpcResult<never> {
 }
 
 function safeError(error: unknown): string {
-  return error instanceof Error && ['DSH 授权服务尚未就绪', '当前 DSH 没有注册 openai-codex 授权流程', '输入内容无效', '当前没有等待输入的授权问题', 'DSH 凭据服务尚未就绪'].includes(error.message)
-    ? error.message
-    : '授权请求失败，请重试。'
+  if (error instanceof Error && ['DSH 授权服务尚未就绪', '当前 DSH 没有注册 openai-codex 授权流程', '输入内容无效', '当前没有等待输入的授权问题', 'DSH 凭据服务尚未就绪'].includes(error.message)) {
+    return error.message
+  }
+  const code = isRecord(error) && typeof error.code === 'string' ? error.code : undefined
+  return code && /^[A-Z0-9_.-]{1,64}$/.test(code)
+    ? `授权流程失败（${code}），请重试或查看 DSH 日志。`
+    : '授权流程失败，请重试或查看 DSH 日志。'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
