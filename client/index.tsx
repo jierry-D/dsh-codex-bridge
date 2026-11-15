@@ -78,6 +78,11 @@ function LoginSection({ remote }: { remote: Remote }) {
   </section>
 }
 
+function Section({ remote }: { remote?: Remote }) {
+  if (!remote) return null
+  return <LoginSection remote={remote} />
+}
+
 export const inject = ['slots', 'remote']
 
 export async function apply(ctx: any): Promise<() => Promise<void>> {
@@ -87,11 +92,13 @@ export async function apply(ctx: any): Promise<() => Promise<void>> {
     await disposeRemote()
     throw new Error('Codex Remote service did not mount')
   }
+  const injected = () => ({ remote })
   ctx.slots.inject('settings.section', () => ctx.slots.register({
     name: 'settings.section',
     id: 'dsh-codex-bridge',
     order: 20,
     label: () => 'Codex 登录',
-  }, () => <LoginSection remote={remote} />))
+    inject: injected,
+  }, Section))
   return async () => { await disposeRemote() }
 }
